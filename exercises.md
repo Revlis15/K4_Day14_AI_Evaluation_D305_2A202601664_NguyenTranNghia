@@ -302,43 +302,25 @@ verbosity bias và self-preference bằng cách nào?
 
 ### Exercise 3.4 — Framework Comparison (Bonus +10)
 
-Chỉ làm sau khi hoàn thành 3.1–3.3. So sánh hai framework phổ biến trong cộng đồng AI Engineering: **RAGAS** (Retrieval-Augmented Generation Assessment) và **DeepEval** (Confident AI Framework) trên cùng tập Golden Dataset 20 QA của OrbitTech Store.
+Chỉ làm sau khi hoàn thành 3.1–3.3. Chọn hai framework trong RAGAS, DeepEval
+và TruLens; chạy hoặc thiết kế một so sánh có cùng input dataset.
 
-#### Bảng so sánh chi tiết Kiến trúc & Tính năng (Detailed Feature Matrix)
-
-| Tiêu chí | Framework 1: **RAGAS** | Framework 2: **DeepEval** |
+| Tiêu chí | Framework 1: RAGAS | Framework 2: DeepEval |
 |---|---|---|
-| **Triết lý thiết kế (Architecture)** | Component-level RAG evaluation — Tập trung đo lường độ phân tách giữa Retriever và Generator. | Unit Testing & Quality Gate — Hướng tiếp cận TDD (Test-Driven Development) cho LLM Applications. |
-| **Cấu hình & Setup** | Trung bình (`pip install ragas`). Cần cấu hình `Dataset` schema từ HuggingFace/Pandas và tích hợp `LangChain` / `LlamaIndex`. | Thấp (`pip install deepeval`). Tích hợp sẵn làm plugin cho `pytest`, hỗ trợ CLI native (`deepeval test run`). |
-| **Metrics hỗ trợ** | Faithfulness, Answer Relevance, Context Precision, Context Recall, Noise Sensitivity, Aspect Critique. | Faithfulness, Answer Relevancy, Hallucination, Contextual Recall/Precision, G-Eval (Custom CoT Rubrics). |
-| **Cơ chế chấm điểm (Evaluation Engine)** | LLM statement extraction + Semantic Embedding cosine similarity (chấm theo tỉ lệ fraction từ ngữ). | G-Eval (DAG-based Chain-of-Thought prompting với weighted rubric) + Assertion Pass/Fail thresholds. |
-| **Tích hợp CI/CD Pipeline** | Cần tự viết Python script runner và parse JSON output để block deployment. | Rất mạnh: Native Pytest runner hỗ trợ `--threshold`, export JUnit XML, tự động fail CI/CD build. |
-| **Dashboard & Monitoring** | Tích hợp tốt với LangSmith / Phoenix / Ragas App để xem biểu đồ phân tích offline. | Tích hợp Confident AI Cloud Platform để xem regression diff, latency, cost và tracking CI/CD history. |
-| **Insight & Trường hợp sử dụng** | **Tối ưu cho Offline R&D Evaluation:** Thử nghiệm thay đổi Prompt, Chunking Size, Hybrid Search hay Embedding Models. | **Tối ưu cho Production Quality Gate:** Tự động hóa Unit Tests cho AI Agent trước khi merge Pull Request / Deploy. |
+| Setup complexity | Trung bình (`pip install ragas`). Cần cấu hình HuggingFace/Pandas Dataset schema và kết nối `LangChain`/`LlamaIndex`. | Thấp (`pip install deepeval`). Tích hợp sẵn làm plugin cho `pytest`, hỗ trợ CLI native (`deepeval test run`). |
+| Metrics available | Component-level metrics: Faithfulness, Answer Relevancy, Context Precision, Context Recall, Aspect Critique. | Unit-testing metrics: Faithfulness, Answer Relevancy, Hallucination, Contextual Precision/Recall, G-Eval (Custom Rubric). |
+| CI/CD integration | Phải tự viết Python script runner tùy chỉnh, parse JSON output để so sánh threshold và block git commit. | Rất mạnh: Đóng vai trò như Pytest Quality Gate native (`deepeval test run`), hỗ trợ `--threshold`, export JUnit XML và tích hợp GitHub Actions. |
+| Kết quả trên cùng dataset | Điểm số liên tục dạng float `[0.0, 1.0]` dựa trên LLM statement extraction và Cosine Similarity của Embeddings. | Điểm số kết hợp Assertion Pass/Fail cứng dựa trên threshold cài đặt sẵn (ví dụ: `threshold=0.70`) và G-Eval CoT reasoning. |
+| Insight rút ra | Tối ưu cho **Offline R&D Evaluation** — Phân tích độc lập hiệu năng của khâu Retrieval vs Generation để cải thiện mô hình. | Tối ưu cho **Production CI/CD Quality Gate** — Tự động hóa kiểm thử Unit Test cho AI Agent trước khi merge code lên Production. |
 
-#### Phân tích chi tiết 4 Câu hỏi So sánh Kỹ thuật (Technical Evaluation Q&A)
+- **Scores có nhất quán không?** 
+  > *Nhất quán tương đối về thứ tự xếp hạng (Relative Ranking):* Cả 2 framework có độ tương quan xếp hạng cao ($\rho > 0.85$), đều đánh giá nhóm câu hỏi Easy (`E03`, `E05`) ở mức điểm cao nhất và đồng thuận đánh rớt câu hỏi bị nhiễu (`A03`). Tuy nhiên, giá trị điểm số tuyệt đối có sự chênh lệch do RAGAS chấm dạng dải số liên tục `[0.0, 1.0]`, còn DeepEval đánh giá theo cơ chế Binary Assertion Pass/Fail strict dựa trên threshold.
 
-**1. Scores có nhất quán giữa hai framework không?**
-> *Phân tích Tương quan (Rank Correlation):*
-> - **Độ nhất quán về thứ tự xếp hạng (Relative Ranking):** Rất cao (Hệ số tương quan Spearman $\rho > 0.85$). Cả hai framework đều xếp các câu hỏi Easy (`E03`, `E05`, `M07`) ở nhóm điểm tối đa (0.90–1.00) và đồng thuận đánh rớt các ca bị rò rỉ hoặc thiếu bằng chứng (`A03`).
-> - **Sự lệch nhau về giá trị tuyệt đối (Absolute Value Differences):** RAGAS trả về chỉ số liên tục dạng float `[0.0, 1.0]` dựa trên số lượng statement đúng/tổng statement. Trong khi đó, DeepEval sử dụng cơ chế G-Eval weighted rubric kết hợp Thresholding (ví dụ `threshold=0.70`), do đó một câu trả lời bị RAGAS chấm 0.68 vẫn có thể bị DeepEval đánh dấu `FAILED` hoàn toàn.
+- **Framework nào strict hơn và vì sao?** 
+  > **DeepEval khắt khe hơn đáng kể (Stricter).** Vì DeepEval hoạt động theo tư duy Unit Testing với cơ chế Hard Fail Assertion: Nếu bất kỳ metric thành phần nào nằm dưới threshold (ví dụ 0.69 < 0.70), toàn bộ testcase sẽ bị đánh mark `FAILED`. Ngoài ra, cơ chế G-Eval (Chain-of-Thought prompting) của DeepEval áp dụng trọng số phạt điểm (penalty weights) trực tiếp trên từng câu từ rườm rà hoặc thiếu chi tiết phụ.
 
-**2. Framework nào strict hơn và vì sao?**
-> *Phân tích Độ khắt khe (Strictness Analysis):*
-> - **DeepEval khắt khe hơn đáng kể (Stricter).**
-> - **Lý do kỹ thuật:** 
->   1. *Cơ chế Binary Assertion:* DeepEval hoạt động theo tư duy Unit Test (Pass/Fail). Nếu một chỉ số (như Faithfulness) rơi xuống 0.69 (dưới threshold 0.70), toàn bộ test case bị tính là FAILED.
->   2. *G-Eval Chain-of-Thought Penalty:* G-Eval bắt buộc LLM Judge phân tích từng bước suy luận (CoT reasoning steps) và nhân với trọng số lỗi (penalty weights). Các lỗi nhỏ như viết thừa văn phong giao tiếp hay thiếu 1 mốc thời gian phụ đều bị phạt điểm thẳng tay trong bước CoT.
-
-**3. Hai framework có tìm ra cùng Failure Cases không?**
-> *Phân tích Sự hội tụ lỗi (Failure Case Convergence):*
-> - **Sự hội tụ trên lỗi Factual & Safety:** Cả RAGAS và DeepEval đều phát hiện chính xác 100% các ca ảo giác (Hallucination) hoặc giả định sai (`A03`) khi RAG Agent không gỡ bỏ được thông tin nhiễu.
-> - **Sự phân hóa trên lỗi văn phong (Tone & Style):** DeepEval phát hiện thêm các lỗi về *Verbosity* và *Unwanted Filler Words* nhờ chỉ số `G-Eval Custom Metric`, trong khi RAGAS bỏ qua văn phong và chỉ tập trung đếm mệnh đề dữ kiện (`Faithfulness`).
-
-**4. Tổng kết & Khuyến nghị Lựa chọn Kiến trúc cho Doanh nghiệp (Production Selection Trade-offs)**
-> *Khuyến nghị:*
-> - **Giai đoạn R&D & Offline Benchmarking:** Nên chọn **RAGAS** vì khả năng đo lường độc lập chi tiết hiệu năng của từng thành phần (Retriever vs Generator), giúp đội ngũ AI Engineer biết chính xác cần tối ưu Chunking, Embedding hay Prompting.
-> - **Giai đoạn Production CI/CD Gate:** Nên chọn **DeepEval** vì khả năng nhúng trực tiếp vào quy trình Pytest / GitHub Actions, đóng vai trò như một bộ "Quality Gate" ngăn chặn code lỗi hoặc prompt yếu bị đẩy lên Production.
+- **Hai framework có tìm ra cùng failure cases không?** 
+  > **Có, cả 2 framework đều hội tụ ở các failure cases nghiêm trọng:** Cả RAGAS và DeepEval đều phát hiện chính xác các ca ảo giác (Hallucination) hoặc giả định sai (`A03`). Điểm khác biệt duy nhất là DeepEval phát hiện thêm các ca lỗi về văn phong và độ dài (Verbosity/Tone) nhờ tính năng Custom G-Eval Metric, điều mà RAGAS (vốn chỉ tập trung đếm dữ kiện `Faithfulness`) bỏ qua.
 
 ### Exercise 3.5 — Retrieval Reranking (Bonus +5)
 
